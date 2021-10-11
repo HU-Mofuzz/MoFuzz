@@ -685,24 +685,29 @@ public class ModelGenerator {
 	protected void generateSingleAttribute(EObject eObject, EAttribute eAttribute, Class<?> instanceClass,
 			SourceOfRandomness random) {
 		if (eAttribute.isRequired() || randomGenerator.nextBoolean()) {
-			final Object value;
+			Object value = null;
 			EDataType eAttributeType = eAttribute.getEAttributeType();
 			if (eAttributeType instanceof EEnum) {
 				EEnum eEnum = (EEnum) eAttributeType;
 				int size = eEnum.getELiterals().size();
-				if (instanceClass == null) {
-					// Initial implementation TODO: review
-					instanceClass = int.class;
-					int randomValue = Math.abs((Integer) nextValue(instanceClass, random));
-					value = eEnum.getELiterals().get(randomValue % size);
-				} else {
-					int idx = random.nextInt(size);
-					value = eEnum.getELiterals().get(idx).getInstance();
+				if(size > 0) {
+					if (instanceClass == null) {
+						// Initial implementation TODO: review
+						instanceClass = int.class;
+						int randomValue = Math.abs((Integer) nextValue(instanceClass, random));
+						value = eEnum.getELiterals().get(randomValue % size);
+					} else {
+						int idx = random.nextInt(size);
+						value = eEnum.getELiterals().get(idx).getInstance();
+					}
 				}
 			} else {
 				value = nextValue(instanceClass, random);
 			}
-			eObject.eSet(eAttribute, value);
+			if(value != null) {
+				
+				eObject.eSet(eAttribute, value);
+			}
 		}
 	}
 
@@ -727,11 +732,16 @@ public class ModelGenerator {
 			} else {
 				value = nextValue(instanceClass, random);
 			}
-			values.add(value);
+			if(value != null) {				
+				values.add(value);
+			}
 		}
 	}
 
 	protected Object nextValue(Class<?> instanceClass, SourceOfRandomness random) {
+		if(instanceClass == null) {
+			return null;
+		}
 		final Object value;
 		if (instanceClass.isPrimitive() || isWrapperType(instanceClass)) {
 			value = nextPrimitive(unwrap(instanceClass));

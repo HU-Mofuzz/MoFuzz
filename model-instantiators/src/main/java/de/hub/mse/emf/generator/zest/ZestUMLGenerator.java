@@ -12,6 +12,7 @@
 package de.hub.mse.emf.generator.zest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
@@ -25,9 +26,13 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.impl.ResourceFactoryImpl;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
+import org.eclipse.emf.ecore.xmi.impl.XMLResourceFactoryImpl;
 import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.UMLPackage.Literals;
@@ -64,20 +69,24 @@ public class ZestUMLGenerator extends Generator<Resource>{
 		
 		this.resourceSet = new ResourceSetImpl();
 		this.eClassWhitelist = new HashSet<EClass>();
+		
+		resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new XMIResourceFactoryImpl());
+		Resource ecorePackageResource = resourceSet.getResource(URI.createFileURI("model/svg.ecore"), true);
+		EPackage ecorePackage = (EPackage)ecorePackageResource.getContents().get(0);
 
 		UMLResourcesUtil.init(this.resourceSet);
 		
 		// Might be redundant
-		this.resourceSet.getPackageRegistry().put(UMLPackage.eNS_URI, UMLPackage.eINSTANCE);
-		this.resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put(UMLResource.FILE_EXTENSION, UMLResource.Factory.INSTANCE);
+		this.resourceSet.getPackageRegistry().put(ecorePackage.getNsURI(), ecorePackage);
+		this.resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("svg", new XMLResourceFactoryImpl());
 
-		UMLPackage.eINSTANCE.eClass();
+		ecorePackage.eClass();
 		
-		EcoreUtil.resolveAll(UMLPackage.eINSTANCE);
+		EcoreUtil.resolveAll(ecorePackage);
 		
 		// Might be redundant too
 		//registerPackage(UMLPackage.eINSTANCE);
-		MetamodelResource metamodelResource = new MetamodelResource(UMLPackage.eINSTANCE);
+		MetamodelResource metamodelResource = new MetamodelResource(ecorePackage);
 		
 		/*
 		 * Numeric parameters:
@@ -86,7 +95,7 @@ public class ZestUMLGenerator extends Generator<Resource>{
 		 * 3. maxBreadth
 		 * 4. maxValueSize
 		 */
-		this.config = new ModelGenerationConfigImpl(metamodelResource, Literals.MODEL, eClassWhitelist, 500,  10, 10, 10);
+		this.config = new ModelGenerationConfigImpl(metamodelResource, (EClass)ecorePackage.getEClassifier("SvgType"), eClassWhitelist, 500,  10, 10, 10);
 		this.generator = new ModelGenerator(config);
 		ModelGenerator.trackMetamodelCoverage = false;
 	}
@@ -104,22 +113,27 @@ public class ZestUMLGenerator extends Generator<Resource>{
 				assert(resources.size() == 0);
 			}
 			
-			Resource modelResource = resourceSet.createResource(URI.createFileURI("uml_model" +"_" + (++id) + ".uml"));	
+			Resource modelResource = resourceSet.createResource(URI.createFileURI("svg_model" +"_" + (++id) + ".svg"));	
 			
 			generator.generate(modelResource, random, genStatus);
 						
-			if(modelResource.isModified()) {
-				return modelResource;
-			}
-			else {
+			if(!modelResource.isModified()) {
 				throw new RuntimeException("Unable to create model");
 			}		
+			
+			try {
+				modelResource.save(Collections.emptyMap());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return modelResource;
 		}
 	
 	
 	public static void main(String[] args) throws GenerationException, IOException {
 		ZestUMLGenerator generator = new ZestUMLGenerator();
-		int attempts = 10000;
+		int attempts = 100;
 		int success = 0;
 		for(int i = 0; i < attempts; i++) {
 			long seed = System.currentTimeMillis();
@@ -133,6 +147,7 @@ public class ZestUMLGenerator extends Generator<Resource>{
 					it.next();
 					size++;
 				}
+				System.out.println("Path: "+resource.getURI());
 				System.out.println(size);
 			}
 			catch(Exception e) {
@@ -144,4 +159,5 @@ public class ZestUMLGenerator extends Generator<Resource>{
 		float successRate = (float) success / attempts;
 		System.out.println("Model Generation success rate: " + successRate);
 	}
+	
 }
