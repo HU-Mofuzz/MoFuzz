@@ -11,45 +11,33 @@
 
 package de.hub.mse.emf.generator.zest;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.Set;
-import java.util.logging.LogManager;
-
-import org.apache.commons.lang3.Range;
+import com.pholser.junit.quickcheck.generator.Gen;
+import com.pholser.junit.quickcheck.generator.GenerationStatus;
+import com.pholser.junit.quickcheck.generator.Generator;
+import com.pholser.junit.quickcheck.random.SourceOfRandomness;
+import de.hub.mse.emf.generator.ModelGenerationConfigImpl;
+import de.hub.mse.emf.generator.ModelGenerator;
+import de.hub.mse.emf.generator.internal.MetamodelResource;
+import fr.inria.atlanmod.instantiator.GenerationException;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
-import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.impl.ResourceFactoryImpl;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMLResourceFactoryImpl;
-import org.eclipse.uml2.uml.UMLFactory;
-import org.eclipse.uml2.uml.UMLPackage;
-import org.eclipse.uml2.uml.UMLPackage.Literals;
-import org.eclipse.uml2.uml.resource.UMLResource;
 import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 
-import com.pholser.junit.quickcheck.generator.GenerationStatus;
-import com.pholser.junit.quickcheck.generator.Generator;
-import com.pholser.junit.quickcheck.random.SourceOfRandomness;
-
-import de.hub.mse.emf.generator.ModelGenerationConfigImpl;
-import de.hub.mse.emf.generator.ModelGenerator;
-import de.hub.mse.emf.generator.internal.MetamodelResource;
-import fr.inria.atlanmod.instantiator.GenerationException;
-import fr.inria.atlanmod.instantiator.ZestMetamodelConfig;
-import fr.obeo.emf.specimen.SpecimenGenerator;
-import fr.obeo.emf.specimen.ZestSpecimenGenerator;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.logging.LogManager;
 
 
 public class ZestUMLGenerator extends Generator<Resource>{
@@ -72,12 +60,15 @@ public class ZestUMLGenerator extends Generator<Resource>{
 		
 		resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new XMIResourceFactoryImpl());
 		Resource ecorePackageResource = resourceSet.getResource(URI.createFileURI("model/svg.ecore"), true);
+		Resource xlinkPackageResource = resourceSet.getResource(URI.createFileURI("model/xlink.ecore"), true);
 		EPackage ecorePackage = (EPackage)ecorePackageResource.getContents().get(0);
+		EPackage xlinkPackage = (EPackage)xlinkPackageResource.getContents().get(0);
 
 		UMLResourcesUtil.init(this.resourceSet);
 		
 		// Might be redundant
 		this.resourceSet.getPackageRegistry().put(ecorePackage.getNsURI(), ecorePackage);
+		this.resourceSet.getPackageRegistry().put(xlinkPackage.getNsURI(), xlinkPackage);
 		this.resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("svg", new XMLResourceFactoryImpl());
 
 		ecorePackage.eClass();
@@ -131,9 +122,9 @@ public class ZestUMLGenerator extends Generator<Resource>{
 		}
 	
 	
-	public static void main(String[] args) throws GenerationException, IOException {
+	public static void main(String[] args) {
 		ZestUMLGenerator generator = new ZestUMLGenerator();
-		int attempts = 100;
+		int attempts = 10;
 		int success = 0;
 		for(int i = 0; i < attempts; i++) {
 			long seed = System.currentTimeMillis();
